@@ -59,6 +59,7 @@ Key design decisions:
 | `interrupt()` for HITL | `ctx.request_info()` + `@response_handler` | |
 | `init_chat_model("openai:gpt-4.1")` | `OpenAIChatClient(model="gpt-4.1")` | No provider prefix |
 | MCP via `langchain-mcp-adapters` | `client.get_mcp_tool(url=..., approval_mode=...)` | Native AF MCP |
+| Tavily search tool | `OpenAIChatClient.get_web_search_tool()` | Native model web search, no API key |
 | `WorkflowAgent` | `workflow.as_agent()` | Wraps a Workflow as an Agent |
 
 ## Conventions
@@ -79,6 +80,7 @@ from agent_framework.openai import OpenAIChatClient
 ### Tools
 - Define as plain async functions with `Annotated` type hints. AF auto-wraps them.
 - Docstrings become tool descriptions.
+- Web search uses `OpenAIChatClient.get_web_search_tool()` — returns a dict `{'type': 'web_search', ...}` passed directly in `Agent(tools=[...])`. No external API key needed.
 - Read API keys from `os.environ` directly.
 
 ### Structured Output

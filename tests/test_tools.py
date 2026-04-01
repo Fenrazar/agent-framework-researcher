@@ -42,9 +42,11 @@ def test_is_token_limit_exceeded_false():
     assert is_token_limit_exceeded(exc, "gpt-4.1") is False
 
 
-def test_get_search_tools_tavily(sample_config):
+def test_get_search_tools_web_search(sample_config):
     tools = get_search_tools(sample_config)
     assert len(tools) == 1
+    assert isinstance(tools[0], dict)
+    assert tools[0]["type"] == "web_search"
 
 
 def test_get_search_tools_none(sample_config):

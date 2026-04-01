@@ -10,7 +10,7 @@ def sample_config():
 
     return Configuration(
         llm_provider="openai",
-        search_api="tavily",
+        search_api="web_search",
         allow_clarification=True,
         max_researcher_iterations=3,
         max_react_tool_calls=5,

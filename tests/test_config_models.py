@@ -7,14 +7,13 @@ from agent_framework_researcher.models import (
     HumanClarificationRequest,
     ResearchBriefMessage,
     ResearchQuestion,
-    Summary,
     SupervisorInput,
 )
 
 
 def test_configuration_defaults():
     config = Configuration()
-    assert config.search_api == SearchAPI.TAVILY
+    assert config.search_api == SearchAPI.WEB_SEARCH
     assert config.allow_clarification is True
     assert config.max_concurrent_research_units == 5
     assert config.research_model == "gpt-4.1"
@@ -38,11 +37,6 @@ def test_mcp_config():
     mcp = MCPConfig(url="https://example.com/mcp", tools=["search"])
     assert mcp.url == "https://example.com/mcp"
     assert mcp.tools == ["search"]
-
-
-def test_summary_model():
-    s = Summary(summary="test summary", key_excerpts="key info")
-    assert s.summary == "test summary"
 
 
 def test_clarify_with_user_model():

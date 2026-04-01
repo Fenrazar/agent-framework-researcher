@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 class SearchAPI(Enum):
     """Available search API providers."""
 
-    TAVILY = "tavily"
+    WEB_SEARCH = "web_search"
     NONE = "none"
 
 
@@ -36,14 +36,11 @@ class Configuration(BaseModel):
     max_concurrent_research_units: int = Field(default=5)
 
     # Research
-    search_api: SearchAPI = Field(default=SearchAPI.TAVILY)
+    search_api: SearchAPI = Field(default=SearchAPI.WEB_SEARCH)
     max_researcher_iterations: int = Field(default=6)
     max_react_tool_calls: int = Field(default=10)
 
     # Model names (AF format — no provider prefix, e.g. "gpt-4.1" not "openai:gpt-4.1")
-    summarization_model: str = Field(default="gpt-4.1-mini")
-    summarization_model_max_tokens: int = Field(default=8192)
-    max_content_length: int = Field(default=50000)
     research_model: str = Field(default="gpt-4.1")
     research_model_max_tokens: int = Field(default=10000)
     compression_model: str = Field(default="gpt-4.1")

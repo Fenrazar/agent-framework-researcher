@@ -53,7 +53,7 @@ def _build_conduct_research(client: OpenAIChatClient, config: Configuration):
         tools.extend(mcp_tools)
 
         if not tools:
-            return "Error: No search tools configured. Please set TAVILY_API_KEY or configure MCP."
+            return "Error: No search tools configured. Please set search_api to 'web_search' or configure MCP."
 
         researcher_prompt = research_system_prompt.format(
             mcp_prompt=config.mcp_prompt or "",

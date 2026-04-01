@@ -11,13 +11,6 @@ from pydantic import BaseModel, Field
 # Structured output models (used for JSON parsing from LLM responses)
 
 
-class Summary(BaseModel):
-    """Research summary with key findings."""
-
-    summary: str
-    key_excerpts: str
-
-
 class ClarifyWithUser(BaseModel):
     """Model for user clarification requests."""
 
