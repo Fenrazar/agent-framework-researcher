@@ -8,8 +8,11 @@ Port of [langchain-ai/open_deep_research](https://github.com/langchain-ai/open_d
 # Install all dependencies
 uv sync
 
-# Run the agent
+# Run the agent (CLI)
 uv run -m agent_framework_researcher
+
+# Run the agent (DevUI web interface at http://localhost:8080)
+uv run -m agent_framework_researcher_devui
 
 # Run all tests
 uv run pytest

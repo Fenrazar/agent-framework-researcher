@@ -1,6 +1,6 @@
 """Workflow wiring — connects executors and agents via WorkflowBuilder."""
 
-from agent_framework import WorkflowBuilder
+from agent_framework import Workflow, WorkflowAgent, WorkflowBuilder
 from agent_framework.openai import OpenAIChatClient
 
 from agent_framework_researcher.agents import create_supervisor_agent
@@ -13,21 +13,17 @@ from agent_framework_researcher.executors import (
 )
 
 
-def build_deep_research_workflow(client: OpenAIChatClient, config: Configuration):
-    """Build the full deep research workflow and return it as an Agent.
+def build_workflow(client: OpenAIChatClient, config: Configuration) -> Workflow:
+    """Build the deep research workflow.
 
     Pipeline: clarify → write_brief → supervisor → final_report
-
-    The supervisor Agent is wrapped in SupervisorExecutor to bridge
-    typed messages between workflow stages. Researchers are spawned
-    inside the supervisor's `conduct_research` tool.
     """
     clarify = ClarifyExecutor(client, config)
     write_brief = WriteBriefExecutor(client, config)
     supervisor = SupervisorExecutor(create_supervisor_agent(client, config))
     final_report = FinalReportExecutor(client, config)
 
-    workflow = (
+    return (
         WorkflowBuilder(start_executor=clarify, output_executors=[final_report])
         .add_edge(clarify, write_brief)
         .add_edge(write_brief, supervisor)
@@ -35,4 +31,7 @@ def build_deep_research_workflow(client: OpenAIChatClient, config: Configuration
         .build()
     )
 
-    return workflow.as_agent(name="DeepResearcher")
+
+def build_deep_research_workflow(client: OpenAIChatClient, config: Configuration) -> WorkflowAgent:
+    """Build the workflow and wrap it as an Agent for CLI usage."""
+    return build_workflow(client, config).as_agent(name="DeepResearcher")

@@ -11,8 +11,11 @@ uv sync
 # Copy and fill in your API keys
 cp .env.example .env
 
-# Run
+# Run (CLI)
 uv run -m agent_framework_researcher
+
+# Run (DevUI — web interface at http://localhost:8080)
+uv run -m agent_framework_researcher_devui
 ```
 
 ## Development
