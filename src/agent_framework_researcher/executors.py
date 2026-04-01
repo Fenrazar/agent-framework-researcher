@@ -49,8 +49,15 @@ class ClarifyExecutor(Executor):
         self._config = config
 
     @handler
-    async def handle(self, messages: list[Message], ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
+    async def handle_message(self, message: Message, ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
+        await self._clarify(message.text or "", ctx)
+
+    @handler
+    async def handle_messages(self, messages: list[Message], ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
         messages_text = "\n".join(m.text for m in messages if m.text)
+        await self._clarify(messages_text, ctx)
+
+    async def _clarify(self, messages_text: str, ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
 
         if not self._config.allow_clarification:
             await ctx.send_message(ResearchBriefMessage(messages_text=messages_text))
