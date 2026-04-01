@@ -6,8 +6,17 @@ ClarifyExecutor → WriteBriefExecutor → (SupervisorAgent) → FinalReportExec
 
 import json
 import logging
+from typing import Never
 
-from agent_framework import Agent, BaseChatClient, Executor, Message, WorkflowContext, handler, response_handler
+from agent_framework import (
+    Agent,
+    BaseChatClient,
+    Executor,
+    Message,
+    WorkflowContext,
+    handler,
+    response_handler,
+)
 
 from agent_framework_researcher.client_factory import create_client
 from agent_framework_researcher.configuration import Configuration
@@ -40,7 +49,7 @@ class ClarifyExecutor(Executor):
         self._config = config
 
     @handler
-    async def handle(self, messages: list[Message], ctx: WorkflowContext) -> None:
+    async def handle(self, messages: list[Message], ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
         messages_text = "\n".join(m.text for m in messages if m.text)
 
         if not self._config.allow_clarification:
@@ -87,7 +96,7 @@ class ClarifyExecutor(Executor):
         self,
         original: HumanClarificationRequest,
         response: str,
-        ctx: WorkflowContext,
+        ctx: WorkflowContext[ResearchBriefMessage, Never],
     ) -> None:
         """Handle user's clarification response, then proceed to research."""
         messages_text = f"User query (with clarification):\n{response}"
@@ -103,7 +112,7 @@ class WriteBriefExecutor(Executor):
         self._config = config
 
     @handler
-    async def handle(self, msg: ResearchBriefMessage, ctx: WorkflowContext) -> None:
+    async def handle(self, msg: ResearchBriefMessage, ctx: WorkflowContext[SupervisorInput, Never]) -> None:
         prompt_content = transform_messages_into_research_topic_prompt.format(
             messages=msg.messages_text,
             date=get_today_str(),
@@ -132,6 +141,26 @@ class WriteBriefExecutor(Executor):
         await ctx.send_message(SupervisorInput(research_brief=research_brief))
 
 
+class SupervisorExecutor(Executor):
+    """Wraps the supervisor Agent as a workflow executor.
+
+    Accepts SupervisorInput, runs the supervisor agent, and passes
+    the research findings (as a string) to the next executor.
+    """
+
+    def __init__(self, supervisor_agent: Agent):
+        super().__init__(id="supervisor")
+        self._agent = supervisor_agent
+
+    @handler
+    async def handle(self, msg: SupervisorInput, ctx: WorkflowContext[str, Never]) -> None:
+        result = await self._agent.run(msg.research_brief)
+        # Store findings in state and pass downstream
+        findings = result.text or ""
+        ctx.set_state("findings", findings)
+        await ctx.send_message(findings)
+
+
 class FinalReportExecutor(Executor):
     """Generate the final comprehensive research report."""
 
@@ -141,7 +170,7 @@ class FinalReportExecutor(Executor):
         self._config = config
 
     @handler
-    async def handle(self, trigger: str, ctx: WorkflowContext) -> None:
+    async def handle(self, trigger: str, ctx: WorkflowContext[Never, str]) -> None:
         research_brief = ctx.get_state("research_brief") or ""
         findings = ctx.get_state("findings") or trigger
         messages_text = ctx.get_state("messages_text") or ""

@@ -102,3 +102,7 @@ AF doesn't have `.with_structured_output()`. Instead:
 - **Original**: https://github.com/langchain-ai/open_deep_research (cloned in `_reference/`)
 - **Target framework**: https://github.com/microsoft/agent-framework/tree/main/python
 - **AF workflow samples**: https://github.com/microsoft/agent-framework/tree/main/python/samples/03-workflows
+
+
+## Rules
+You are not allowed to commit and push by yourself
