@@ -7,9 +7,9 @@ ClarifyExecutor → WriteBriefExecutor → (SupervisorAgent) → FinalReportExec
 import json
 import logging
 
-from agent_framework import Agent, Executor, Message, WorkflowContext, handler, response_handler
-from agent_framework.openai import OpenAIChatClient
+from agent_framework import Agent, BaseChatClient, Executor, Message, WorkflowContext, handler, response_handler
 
+from agent_framework_researcher.client_factory import create_client
 from agent_framework_researcher.configuration import Configuration
 from agent_framework_researcher.models import (
     ClarifyWithUser,
@@ -34,7 +34,7 @@ class ClarifyExecutor(Executor):
     If clarification is disabled or not needed, passes input directly downstream.
     """
 
-    def __init__(self, client: OpenAIChatClient, config: Configuration):
+    def __init__(self, client: BaseChatClient, config: Configuration):
         super().__init__(id="clarify")
         self._client = client
         self._config = config
@@ -97,7 +97,7 @@ class ClarifyExecutor(Executor):
 class WriteBriefExecutor(Executor):
     """Transform user messages into a structured research brief."""
 
-    def __init__(self, client: OpenAIChatClient, config: Configuration):
+    def __init__(self, client: BaseChatClient, config: Configuration):
         super().__init__(id="write_brief")
         self._client = client
         self._config = config
@@ -135,7 +135,7 @@ class WriteBriefExecutor(Executor):
 class FinalReportExecutor(Executor):
     """Generate the final comprehensive research report."""
 
-    def __init__(self, client: OpenAIChatClient, config: Configuration):
+    def __init__(self, client: BaseChatClient, config: Configuration):
         super().__init__(id="final_report")
         self._client = client
         self._config = config
@@ -146,7 +146,7 @@ class FinalReportExecutor(Executor):
         findings = ctx.get_state("findings") or trigger
         messages_text = ctx.get_state("messages_text") or ""
 
-        report_client = OpenAIChatClient(model=self._config.final_report_model)
+        report_client = create_client(self._config, model=self._config.final_report_model)
 
         max_retries = 3
         current_retry = 0

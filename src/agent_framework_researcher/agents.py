@@ -9,6 +9,7 @@ import logging
 from agent_framework import Agent
 from agent_framework.openai import OpenAIChatClient
 
+from agent_framework_researcher.client_factory import create_client
 from agent_framework_researcher.configuration import Configuration
 from agent_framework_researcher.prompts import (
     compress_research_simple_human_message,
@@ -60,7 +61,7 @@ def _build_conduct_research(client: OpenAIChatClient, config: Configuration):
             date=get_today_str(),
         )
 
-        research_client = OpenAIChatClient(model=config.research_model)
+        research_client = create_client(config, model=config.research_model)
         researcher = Agent(
             client=research_client,
             name="Researcher",
@@ -76,7 +77,7 @@ def _build_conduct_research(client: OpenAIChatClient, config: Configuration):
 
         # Compress the research output
         compress_prompt = compress_research_system_prompt.format(date=get_today_str())
-        compress_client = OpenAIChatClient(model=config.compression_model)
+        compress_client = create_client(config, model=config.compression_model)
         compressor = Agent(
             client=compress_client,
             name="Compressor",
