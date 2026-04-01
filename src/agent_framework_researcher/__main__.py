@@ -13,7 +13,7 @@ from rich.panel import Panel
 
 from agent_framework_researcher.client_factory import create_client
 from agent_framework_researcher.configuration import Configuration
-from agent_framework_researcher.workflow import build_deep_research_workflow
+from agent_framework_researcher.workflow import build_workflow
 
 console = Console()
 
@@ -42,12 +42,18 @@ async def main() -> None:
 
     console.print(f"\n[dim]Researching: {query}[/dim]\n")
 
-    agent = build_deep_research_workflow(client, config)
-    result = await agent.run(query)
+    workflow = build_workflow(client, config)
+    final_report = ""
+
+    async for event in workflow.run(query, stream=True):
+        if event.type == "progress":
+            console.print(f"  [cyan]▸[/cyan] [dim]{event.data}[/dim]")
+        elif event.type == "output":
+            final_report = str(event.data)
 
     console.print("\n")
     console.print(Panel("[bold]Final Report[/bold]", style="green"))
-    console.print(Markdown(str(result)))
+    console.print(Markdown(final_report))
 
 
 def cli() -> None:

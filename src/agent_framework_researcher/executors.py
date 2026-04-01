@@ -14,6 +14,7 @@ from agent_framework import (
     Executor,
     Message,
     WorkflowContext,
+    WorkflowEvent,
     handler,
     response_handler,
 )
@@ -49,6 +50,10 @@ class ClarifyExecutor(Executor):
         self._config = config
 
     @handler
+    async def handle_str(self, text: str, ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
+        await self._clarify(text, ctx)
+
+    @handler
     async def handle_message(self, message: Message, ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
         await self._clarify(message.text or "", ctx)
 
@@ -58,8 +63,10 @@ class ClarifyExecutor(Executor):
         await self._clarify(messages_text, ctx)
 
     async def _clarify(self, messages_text: str, ctx: WorkflowContext[ResearchBriefMessage, Never]) -> None:
+        await ctx.add_event(WorkflowEvent(type="progress", data="Analyzing query..."))
 
         if not self._config.allow_clarification:
+            await ctx.add_event(WorkflowEvent(type="progress", data="Skipping clarification — proceeding to research"))
             await ctx.send_message(ResearchBriefMessage(messages_text=messages_text))
             return
 
@@ -87,6 +94,7 @@ class ClarifyExecutor(Executor):
             return
 
         if clarification.need_clarification:
+            await ctx.add_event(WorkflowEvent(type="progress", data=f"Asking clarifying question: {clarification.question}"))
             await ctx.request_info(
                 HumanClarificationRequest(
                     question=clarification.question,
@@ -95,6 +103,7 @@ class ClarifyExecutor(Executor):
                 str,
             )
         else:
+            await ctx.add_event(WorkflowEvent(type="progress", data="No clarification needed — proceeding to research"))
             ctx.set_state("verification", clarification.verification)
             await ctx.send_message(ResearchBriefMessage(messages_text=messages_text))
 
@@ -120,6 +129,8 @@ class WriteBriefExecutor(Executor):
 
     @handler
     async def handle(self, msg: ResearchBriefMessage, ctx: WorkflowContext[SupervisorInput, Never]) -> None:
+        await ctx.add_event(WorkflowEvent(type="progress", data="Generating research brief..."))
+
         prompt_content = transform_messages_into_research_topic_prompt.format(
             messages=msg.messages_text,
             date=get_today_str(),
@@ -145,6 +156,7 @@ class WriteBriefExecutor(Executor):
 
         ctx.set_state("research_brief", research_brief)
         ctx.set_state("messages_text", msg.messages_text)
+        await ctx.add_event(WorkflowEvent(type="progress", data=f"Research brief ready: {research_brief[:200]}..."))
         await ctx.send_message(SupervisorInput(research_brief=research_brief))
 
 
@@ -161,10 +173,11 @@ class SupervisorExecutor(Executor):
 
     @handler
     async def handle(self, msg: SupervisorInput, ctx: WorkflowContext[str, Never]) -> None:
+        await ctx.add_event(WorkflowEvent(type="progress", data="Supervisor starting research..."))
         result = await self._agent.run(msg.research_brief)
-        # Store findings in state and pass downstream
         findings = result.text or ""
         ctx.set_state("findings", findings)
+        await ctx.add_event(WorkflowEvent(type="progress", data="Research complete — compiling findings"))
         await ctx.send_message(findings)
 
 
@@ -178,6 +191,8 @@ class FinalReportExecutor(Executor):
 
     @handler
     async def handle(self, trigger: str, ctx: WorkflowContext[Never, str]) -> None:
+        await ctx.add_event(WorkflowEvent(type="progress", data="Writing final report..."))
+
         research_brief = ctx.get_state("research_brief") or ""
         findings = ctx.get_state("findings") or trigger
         messages_text = ctx.get_state("messages_text") or ""
@@ -201,6 +216,7 @@ class FinalReportExecutor(Executor):
                 agent = Agent(client=report_client, instructions="You are a research report writer.")
                 result = await agent.run(prompt)
 
+                await ctx.add_event(WorkflowEvent(type="progress", data="Final report complete"))
                 await ctx.yield_output(result.text)
                 return
 
