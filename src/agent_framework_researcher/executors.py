@@ -95,6 +95,7 @@ class ClarifyExecutor(Executor):
 
         if clarification.need_clarification:
             await ctx.add_event(WorkflowEvent(type="progress", data=f"Asking clarifying question: {clarification.question}"))
+            ctx.set_state("original_query", messages_text)
             await ctx.request_info(
                 HumanClarificationRequest(
                     question=clarification.question,
@@ -115,7 +116,8 @@ class ClarifyExecutor(Executor):
         ctx: WorkflowContext[ResearchBriefMessage, Never],
     ) -> None:
         """Handle user's clarification response, then proceed to research."""
-        messages_text = f"User query (with clarification):\n{response}"
+        original_query = ctx.get_state("original_query") or ""
+        messages_text = f"Original query: {original_query}\n\nClarification question: {original.question}\nUser's answer: {response}"
         await ctx.send_message(ResearchBriefMessage(messages_text=messages_text))
 
 
