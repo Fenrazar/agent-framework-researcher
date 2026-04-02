@@ -1,14 +1,14 @@
 """Configuration management for the Deep Research agent.
 
-Ported from langchain-ai/open_deep_research — LangChain RunnableConfig replaced with
-env-var-based Configuration.from_env().
+Uses pydantic-settings BaseSettings for automatic environment variable loading.
+All fields are read from env vars matching their uppercase field names
+(e.g. ``DEFAULT_MODEL``, ``LLM_ENDPOINT``).
 """
 
-import os
 from enum import Enum
-from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class SearchAPI(Enum):
@@ -27,8 +27,22 @@ class MCPConfig(BaseModel):
     """The tools to make available to the LLM."""
 
 
-class Configuration(BaseModel):
-    """Main configuration for the Deep Research agent."""
+class Configuration(BaseSettings):
+    """Main configuration for the Deep Research agent.
+
+    All fields are automatically loaded from environment variables.
+    Just call ``Configuration()`` — no explicit env loading needed.
+
+    Per-task model fields (``research_model``, ``compression_model``,
+    ``final_report_model``) fall back to ``default_model`` when not set.
+    """
+
+    model_config = SettingsConfigDict(
+        env_prefix="",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # General
     max_structured_output_retries: int = Field(default=3)
@@ -40,29 +54,33 @@ class Configuration(BaseModel):
     max_researcher_iterations: int = Field(default=6)
     max_react_tool_calls: int = Field(default=10)
 
-    # Model names (AF format — no provider prefix, e.g. "gpt-4.1" not "openai:gpt-4.1")
-    research_model: str = Field(default="gpt-4.1")
+    # Models — per-task models fall back to default_model when not set
+    default_model: str = Field(default="gpt-4.1")
+    research_model: str | None = Field(default=None)
     research_model_max_tokens: int = Field(default=10000)
-    compression_model: str = Field(default="gpt-4.1")
-    compression_model_max_tokens: int = Field(default=8192)
-    final_report_model: str = Field(default="gpt-4.1")
-    final_report_model_max_tokens: int = Field(default=10000)
+    compression_model: str | None = Field(default=None)
+    compression_model_max_tokens: int = Field(default=10000)
+    final_report_model: str | None = Field(default=None)
+    final_report_model_max_tokens: int = Field(default=50000)
 
     # MCP
     mcp_config: MCPConfig | None = Field(default=None)
     mcp_prompt: str | None = Field(default=None)
 
-    # Provider: "openai" or "azure"
+    # LLM provider: "openai" or "azure"
     llm_provider: str = Field(default="openai")
 
-    @classmethod
-    def from_env(cls, overrides: dict[str, Any] | None = None) -> Configuration:
-        """Create Configuration from environment variables and optional overrides."""
-        values: dict[str, Any] = {}
-        for field_name in cls.model_fields:
-            env_val = os.environ.get(field_name.upper())
-            if env_val is not None:
-                values[field_name] = env_val
-        if overrides:
-            values.update(overrides)
-        return cls(**{k: v for k, v in values.items() if v is not None})
+    # LLM credentials
+    llm_api_key: str | None = Field(default=None)
+    llm_endpoint: str | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def _apply_model_defaults(self) -> Configuration:
+        """Fill per-task models from default_model when not explicitly set."""
+        if self.research_model is None:
+            self.research_model = self.default_model
+        if self.compression_model is None:
+            self.compression_model = self.default_model
+        if self.final_report_model is None:
+            self.final_report_model = self.default_model
+        return self

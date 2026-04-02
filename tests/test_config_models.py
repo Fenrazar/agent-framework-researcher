@@ -16,20 +16,42 @@ def test_configuration_defaults():
     assert config.search_api == SearchAPI.WEB_SEARCH
     assert config.allow_clarification is True
     assert config.max_concurrent_research_units == 5
-    assert config.research_model == "gpt-4.1"
+    assert config.default_model == "gpt-4.1"
+    assert config.research_model == "gpt-4.1"  # falls back to default_model
     assert config.llm_provider == "openai"
 
 
 def test_configuration_from_env(monkeypatch):
     monkeypatch.setenv("ALLOW_CLARIFICATION", "false")
     monkeypatch.setenv("LLM_PROVIDER", "azure")
-    config = Configuration.from_env()
+    config = Configuration()
     assert config.allow_clarification is False
     assert config.llm_provider == "azure"
 
 
-def test_configuration_from_env_with_overrides():
-    config = Configuration.from_env(overrides={"max_researcher_iterations": 10})
+def test_configuration_llm_fields(monkeypatch):
+    monkeypatch.setenv("LLM_API_KEY", "sk-test")
+    monkeypatch.setenv("LLM_ENDPOINT", "https://test.openai.azure.com/")
+    config = Configuration()
+    assert config.llm_api_key == "sk-test"
+    assert config.llm_endpoint == "https://test.openai.azure.com/"
+
+
+def test_configuration_default_model_fallback():
+    config = Configuration(default_model="o3")
+    assert config.research_model == "o3"
+    assert config.compression_model == "o3"
+    assert config.final_report_model == "o3"
+
+
+def test_configuration_per_task_model_override():
+    config = Configuration(default_model="o3", research_model="gpt-4o")
+    assert config.research_model == "gpt-4o"
+    assert config.compression_model == "o3"
+
+
+def test_configuration_with_overrides():
+    config = Configuration(max_researcher_iterations=10)
     assert config.max_researcher_iterations == 10
 
 

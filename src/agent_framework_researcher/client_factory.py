@@ -1,17 +1,16 @@
 """Chat client factory supporting both OpenAI and Azure OpenAI providers."""
 
-import os
-
 from agent_framework.openai import OpenAIChatClient
+from azure.identity import DefaultAzureCredential
 
 from agent_framework_researcher.configuration import Configuration
 
 
 def _is_azure(config: Configuration) -> bool:
-    """Detect Azure mode from explicit config or environment variables."""
+    """Detect Azure mode from explicit config or configured endpoint."""
     if config.llm_provider == "azure":
         return True
-    return bool(os.environ.get("AZURE_OPENAI_ENDPOINT"))
+    return "openai.azure.com" in (config.llm_endpoint or "")
 
 
 def create_client(config: Configuration, model: str | None = None) -> OpenAIChatClient:
@@ -19,44 +18,35 @@ def create_client(config: Configuration, model: str | None = None) -> OpenAIChat
 
     Provider detection order:
     1. Explicit ``config.llm_provider == "azure"``
-    2. ``AZURE_OPENAI_ENDPOINT`` env var present → Azure
+    2. ``config.llm_endpoint`` is set → Azure
     3. Otherwise → OpenAI
 
     For Azure, authentication resolves as:
-    1. ``AZURE_OPENAI_API_KEY`` env var
-    2. ``az login`` credential (AzureCliCredential)
+    1. ``config.llm_api_key``
+    2. DefaultAzureCredential (supports managed identity, az login, etc.)
 
     Args:
         config: Application configuration with provider and model settings.
-        model: Optional model override. Falls back to config.research_model.
+        model: Optional model override. Falls back to config.default_model.
 
     Returns:
         Configured OpenAIChatClient.
     """
-    resolved_model = model or config.research_model
+    resolved_model = model or config.default_model
     kwargs: dict = {"model": resolved_model}
 
     if _is_azure(config):
-        azure_endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "")
+        endpoint = config.llm_endpoint or ""
         # AF expects the base endpoint, not a sub-path
-        azure_endpoint = azure_endpoint.split("/openai")[0].rstrip("/")
-        kwargs["azure_endpoint"] = azure_endpoint
+        endpoint = endpoint.split("/openai")[0].rstrip("/")
+        kwargs["azure_endpoint"] = endpoint
 
-        deployment = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME")
-        if deployment:
-            kwargs["model"] = deployment
-
-        azure_key = os.environ.get("AZURE_OPENAI_API_KEY")
-        if azure_key:
-            kwargs["api_key"] = azure_key
+        if config.llm_api_key:
+            kwargs["api_key"] = config.llm_api_key
         else:
-            # Fall back to az login credential
-            from azure.identity import AzureCliCredential
-
-            kwargs["credential"] = AzureCliCredential()
+            kwargs["credential"] = DefaultAzureCredential()
     else:
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if api_key:
-            kwargs["api_key"] = api_key
+        if config.llm_api_key:
+            kwargs["api_key"] = config.llm_api_key
 
     return OpenAIChatClient(**kwargs)
