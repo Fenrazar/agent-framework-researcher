@@ -11,8 +11,11 @@ from agent_framework_researcher.models import (
 )
 
 
-def test_configuration_defaults():
-    config = Configuration()
+def test_configuration_defaults(monkeypatch):
+    monkeypatch.delenv("DEFAULT_MODEL", raising=False)
+    monkeypatch.delenv("RESEARCH_MODEL", raising=False)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    config = Configuration(_env_file=None)
     assert config.search_api == SearchAPI.WEB_SEARCH
     assert config.allow_clarification is True
     assert config.max_concurrent_research_units == 5
