@@ -6,7 +6,6 @@ Run with: uv run -m agent_framework_researcher
 import asyncio
 import sys
 
-from dotenv import load_dotenv
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
@@ -19,8 +18,7 @@ console = Console()
 
 
 async def main() -> None:
-    load_dotenv()
-    config = Configuration.from_env()
+    config = Configuration()
     client = create_client(config)
 
     console.print(

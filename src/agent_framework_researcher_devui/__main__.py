@@ -10,7 +10,6 @@ Launches the Agent Framework DevUI at http://localhost:8080 with:
 import sys
 
 from agent_framework.devui import serve
-from dotenv import load_dotenv
 
 from agent_framework_researcher.agents import create_supervisor_agent
 from agent_framework_researcher.client_factory import create_client
@@ -19,8 +18,7 @@ from agent_framework_researcher.workflow import build_workflow
 
 
 def main() -> None:
-    load_dotenv()
-    config = Configuration.from_env()
+    config = Configuration()
     client = create_client(config)
 
     # Build entities for DevUI

@@ -93,9 +93,9 @@ AF doesn't have `.with_structured_output()`. Instead:
 3. Validate: `Model.model_validate(parsed)`.
 
 ### Configuration
-- `Configuration.from_env()` loads from environment variables.
-- Model strings use AF format (`"gpt-4.1"`) not LangChain format (`"openai:gpt-4.1"`).
-- Supports both OpenAI and Azure OpenAI via `LLM_PROVIDER` env var.
+- `Configuration` extends pydantic-settings `BaseSettings` — auto-loads from env vars and `.env` file.
+- `default_model` sets the model for all tasks; per-task models (`research_model`, etc.) fall back to it.
+- `llm_api_key` and `llm_endpoint` are provider-agnostic. Azure is auto-detected when `llm_endpoint` is set.
 
 ### Prompts
 - `prompts.py` is copied verbatim from open_deep_research. Do not modify unless fixing a bug.
