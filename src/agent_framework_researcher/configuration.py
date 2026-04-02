@@ -6,6 +6,7 @@ All fields are read from env vars matching their uppercase field names
 """
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -73,6 +74,9 @@ class Configuration(BaseSettings):
     # LLM credentials
     llm_api_key: str | None = Field(default=None)
     llm_endpoint: str | None = Field(default=None)
+
+    # Reasoning effort for models that support it (o-series, gpt-5)
+    reasoning_effort: Literal["none", "low", "medium", "high", "xhigh"] | None = Field(default=None)
 
     @model_validator(mode="after")
     def _apply_model_defaults(self) -> Configuration:

@@ -78,6 +78,7 @@ All settings are loaded from environment variables via pydantic-settings. Just c
 | `MAX_RESEARCHER_ITERATIONS` | `6` | Supervisor delegation rounds |
 | `MAX_REACT_TOOL_CALLS` | `10` | Tool calls per researcher agent |
 | `MAX_STRUCTURED_OUTPUT_RETRIES` | `3` | JSON parsing retries |
+| `REASONING_EFFORT` | — | `"none"`, `"low"`, `"medium"`, `"high"`, `"xhigh"` (for o-series/gpt-5 models) |
 
 ## Development
 

@@ -22,6 +22,13 @@ from agent_framework_researcher.tools import get_search_tools, get_today_str, lo
 logger = logging.getLogger(__name__)
 
 
+def _reasoning_options(config: Configuration) -> dict | None:
+    """Build default_options with reasoning effort if configured."""
+    if not config.reasoning_effort:
+        return None
+    return {"reasoning": {"effort": config.reasoning_effort}}
+
+
 def research_complete() -> str:
     """Signal that all research is complete.
 
@@ -67,6 +74,7 @@ def _build_conduct_research(client: OpenAIChatClient, config: Configuration):
             name="Researcher",
             instructions=researcher_prompt,
             tools=tools,
+            default_options=_reasoning_options(config),
         )
 
         try:
@@ -116,4 +124,5 @@ def create_supervisor_agent(client: OpenAIChatClient, config: Configuration) -> 
         name="Supervisor",
         instructions=supervisor_prompt,
         tools=[conduct_research, research_complete, think],
+        default_options=_reasoning_options(config),
     )
