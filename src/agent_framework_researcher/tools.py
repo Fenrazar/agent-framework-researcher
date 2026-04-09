@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Think tool
 # ---------------------------------------------------------------------------
 
+
 def think(reflection: str) -> str:
     """Strategic reflection tool for research planning.
 
@@ -36,6 +37,7 @@ def think(reflection: str) -> str:
 # ---------------------------------------------------------------------------
 # MCP tool loading
 # ---------------------------------------------------------------------------
+
 
 async def load_mcp_tools(client: OpenAIChatClient, config: Configuration) -> list:
     """Load MCP tools using AF's native MCP support.
@@ -61,6 +63,7 @@ async def load_mcp_tools(client: OpenAIChatClient, config: Configuration) -> lis
 # ---------------------------------------------------------------------------
 # Helper utilities
 # ---------------------------------------------------------------------------
+
 
 def get_today_str() -> str:
     """Get current date formatted for prompts."""
@@ -106,3 +109,44 @@ def get_search_tools(config: Configuration) -> list:
     if config.search_api == SearchAPI.WEB_SEARCH:
         return [OpenAIChatClient.get_web_search_tool(search_context_size="medium")]
     return []
+
+
+def extract_citations_from_text(text: str) -> list[dict[str, str]]:
+    """Parse citations from text in common formats.
+
+    Supports:
+    - Markdown links: ``[title](url)``
+    - Numbered references: ``[1] Title: url`` or ``[1] Title — url``
+
+    Deduplicates by URL. Handles URLs with balanced parentheses (e.g. DOI links).
+    """
+    import re
+
+    seen_urls: set[str] = set()
+    citations: list[dict[str, str]] = []
+
+    def _clean_url(url: str) -> str:
+        """Strip trailing punctuation while preserving balanced parentheses."""
+        # Strip trailing punctuation that's clearly not part of the URL
+        url = url.rstrip(".,;:")
+        # Balance parentheses — only strip trailing ) if there are more ) than (
+        while url.endswith(")") and url.count(")") > url.count("("):
+            url = url[:-1]
+        return url
+
+    def _add(title: str, url: str) -> None:
+        url = _clean_url(url)
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            citations.append({"title": title.strip(), "url": url})
+
+    # [title](url) — greedily match URL content including balanced parens
+    # Uses a pattern that allows (nested) parentheses inside the URL
+    for m in re.finditer(r"\[([^\]]+)\]\((https?://(?:[^\s()]*(?:\([^\s()]*\))?[^\s()]*)*)\)", text):
+        _add(m.group(1), m.group(2))
+
+    # [N] Title: url  or  [N] Title — url  or  [N] Title url
+    for m in re.finditer(r"\[\d+\]\s*(.+?)(?::\s*|\s*[—–-]\s*|\s+)(https?://\S+)", text):
+        _add(m.group(1), m.group(2))
+
+    return citations

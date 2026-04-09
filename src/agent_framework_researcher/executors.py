@@ -33,7 +33,12 @@ from agent_framework_researcher.prompts import (
     final_report_generation_prompt,
     transform_messages_into_research_topic_prompt,
 )
-from agent_framework_researcher.tools import get_model_token_limit, get_today_str, is_token_limit_exceeded
+from agent_framework_researcher.tools import (
+    extract_citations_from_text,
+    get_model_token_limit,
+    get_today_str,
+    is_token_limit_exceeded,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +99,9 @@ class ClarifyExecutor(Executor):
             return
 
         if clarification.need_clarification:
-            await ctx.add_event(WorkflowEvent(type="progress", data=f"Asking clarifying question: {clarification.question}"))
+            await ctx.add_event(
+                WorkflowEvent(type="progress", data=f"Asking clarifying question: {clarification.question}")
+            )
             ctx.set_state("original_query", messages_text)
             await ctx.request_info(
                 HumanClarificationRequest(
@@ -141,9 +148,7 @@ class WriteBriefExecutor(Executor):
         agent = Agent(
             client=self._client,
             instructions=(
-                "You are a research brief writer. "
-                "Always respond with valid JSON matching: "
-                '{"research_brief": "..."}'
+                'You are a research brief writer. Always respond with valid JSON matching: {"research_brief": "..."}'
             ),
         )
         result = await agent.run(prompt_content)
@@ -218,8 +223,12 @@ class FinalReportExecutor(Executor):
                 agent = Agent(client=report_client, instructions="You are a research report writer.")
                 result = await agent.run(prompt)
 
+                report_text = result.text or ""
+                all_citations = extract_citations_from_text(report_text)
+
+                await ctx.add_event(WorkflowEvent(type="citations", data=all_citations))
                 await ctx.add_event(WorkflowEvent(type="progress", data="Final report complete"))
-                await ctx.yield_output(result.text)
+                await ctx.yield_output(report_text)
                 return
 
             except Exception as e:

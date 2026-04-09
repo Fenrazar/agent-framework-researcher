@@ -93,9 +93,7 @@ def _build_conduct_research(client: OpenAIChatClient, config: Configuration):
         )
 
         try:
-            compressed = await compressor.run(
-                f"{result.text}\n\n{compress_research_simple_human_message}"
-            )
+            compressed = await compressor.run(f"{result.text}\n\n{compress_research_simple_human_message}")
             return compressed.text
         except Exception as e:
             logger.warning("Compression failed, returning raw research: %s", e)
