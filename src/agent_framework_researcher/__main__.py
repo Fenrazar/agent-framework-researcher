@@ -24,8 +24,7 @@ async def main() -> None:
 
     console.print(
         Panel(
-            "[bold]Agent Framework Researcher[/bold]\n"
-            "Deep research agent powered by Microsoft Agent Framework",
+            "[bold]Agent Framework Researcher[/bold]\nDeep research agent powered by Microsoft Agent Framework",
             style="blue",
         )
     )
@@ -41,6 +40,7 @@ async def main() -> None:
 
     workflow = build_workflow(client, config)
     final_report = ""
+    citations: list[dict[str, str]] = []
     pending_responses: dict[str, str] | None = None
 
     while True:
@@ -55,6 +55,8 @@ async def main() -> None:
         async for event in stream:
             if event.type == "progress":
                 console.print(f"  [cyan]▸[/cyan] [dim]{event.data}[/dim]")
+            elif event.type == "citations":
+                citations = event.data or []
             elif event.type == "request_info" and isinstance(event.data, HumanClarificationRequest):
                 console.print(f"\n  [yellow]?[/yellow] {event.data.question}")
                 answer = console.input("[bold green]Your answer:[/bold green] ")
@@ -70,12 +72,21 @@ async def main() -> None:
     console.print(Panel("[bold]Final Report[/bold]", style="green"))
     console.print(Markdown(final_report))
 
+    if citations:
+        console.print("\n")
+        console.print(Panel("[bold]Sources[/bold]", style="cyan"))
+        for i, c in enumerate(citations, 1):
+            title = c.get("title", "Untitled")
+            url = c.get("url", "")
+            console.print(f"  [cyan][{i}][/cyan] {title}")
+            console.print(f"      [dim]{url}[/dim]")
+
 
 def cli() -> None:
     """Synchronous entry point."""
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, EOFError):
+    except KeyboardInterrupt, EOFError:
         console.print("\n\n[yellow]Research cancelled.[/yellow]")
 
 
